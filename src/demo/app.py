@@ -30,15 +30,31 @@ def index():
 @app.route("/api/generate")
 def get_q():
 
-    ctxt = request.args['context']
+    ctxtMain = request.args['context']
     ans = request.args['answer']
-    ans_pos = int(request.args.get('ans_pos', ctxt.find(ans)))
-
+    
     if FLAGS.filter_window_size_before >-1:
-        ctxt,ans_pos = preprocessing.filter_context(ctxt, ans_pos, FLAGS.filter_window_size_before, FLAGS.filter_window_size_after, FLAGS.filter_max_tokens)
-    if ans_pos > -1:
-        q =current_app.generator.get_q(ctxt.encode(), ans.encode(), ans_pos)
-        return q
+
+        allQuestion = []
+        allOccurances = [m.start() for m in re.finditer(ans, ctxtMain)]
+
+        textStartPointer = 0
+        # allOccurancesValues = []
+        for eachOccurance in allOccurances:
+
+            ans_pos = int(request.args.get('ans_pos', ctxtMain[textStartPointer:].find(ans)))
+            ctxt,ans_pos = preprocessing.filter_context(ctxtMain[textStartPointer:], ans_pos, 
+            FLAGS.filter_window_size_before, FLAGS.filter_window_size_after, FLAGS.filter_max_tokens)
+            # allOccurancesValues.append((ctxt,ans_pos))
+            textStartPointer = eachOccurance + len(ans)
+            q =current_app.generator.get_q(ctxt.encode(), ans.encode(), ans_pos)
+            
+            allQuestion.append(q)
+    # [m.start() for m in re.finditer('test', 'test test test test')]
+    allQuestion = set(allQuestion)
+    allQuestion = list(allQuestion)
+    # return allQuestion # as a list
+    return "\n".join(allQuestion) #string
     else:
         print(request.args)
         print(ctxt)
