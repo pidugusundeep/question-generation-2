@@ -10,6 +10,12 @@ from helpers import preprocessing
 import json
 
 import flags
+import re
+
+import json
+
+
+
 FLAGS = tf.app.flags.FLAGS
 
 mem_limit=0.9
@@ -30,20 +36,53 @@ def index():
 @app.route("/api/generate")
 def get_q():
 
-    ctxt = request.args['context']
-    ans = request.args['answer']
-    ans_pos = int(request.args.get('ans_pos', ctxt.find(ans)))
+    ctxtMain = request.args['context']
+    answer = request.args['answer']
 
-    if FLAGS.filter_window_size_before >-1:
-        ctxt,ans_pos = preprocessing.filter_context(ctxt, ans_pos, FLAGS.filter_window_size_before, FLAGS.filter_window_size_after, FLAGS.filter_max_tokens)
-    if ans_pos > -1:
-        q =current_app.generator.get_q(ctxt.encode(), ans.encode(), ans_pos)
-        return q
-    else:
-        print(request.args)
-        print(ctxt)
-        print(ans)
-        return "Couldnt find ans in context!"
+    answers = answer.split(",")
+    
+
+    # ans =answers[0]
+
+    finalAllAnswers = []
+
+    for ans in answers:
+        ans = ans.replace("'","")
+        if FLAGS.filter_window_size_before >-1:
+
+            allQuestion = []
+            allOccurances = [m.start() for m in re.finditer(ans, ctxtMain)]
+
+            textStartPointer = 0
+            # allOccurancesValues = []
+            for eachOccurance in allOccurances:
+
+                ans_pos = int(request.args.get('ans_pos', ctxtMain[textStartPointer:].find(ans)))
+                ctxt,ans_pos = preprocessing.filter_context(ctxtMain[textStartPointer:], ans_pos, 
+                FLAGS.filter_window_size_before, FLAGS.filter_window_size_after, FLAGS.filter_max_tokens)
+                # allOccurancesValues.append((ctxt,ans_pos))
+                textStartPointer = eachOccurance + len(ans)
+                q =current_app.generator.get_q(ctxt.encode(), ans.encode(), ans_pos)
+                
+                allQuestion.append({"Question":q,"Paragraph":ctxt})
+
+        finalAllAnswers.append({"Answer":ans,"Details":allQuestion})
+
+
+    return json.dumps({"questions":finalAllAnswers}) # as a list
+
+
+    # return "\n\n".join(allQuestion) #string
+
+    # if ans_pos > -1 or True:
+
+    #     return q
+    # else:
+    #     print(request.args)
+    #     print(ctxt)
+    #     print(ans)
+    #     return "Couldnt find ans in context!"
+
 
 @app.route("/api/generate_batch", methods=['POST'])
 def get_q_batch():
