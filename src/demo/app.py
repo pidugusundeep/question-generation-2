@@ -98,11 +98,11 @@ def get_q_batch():
             ans[i] = ans[i].encode()
 
     
-    if len(ctxts) > 32:
+    if len(ctxts) > FLAGS.batch_size:
         qs = []
-        for b in range(len(ctxts)//32 + 1):
-            start_ix = b * 32
-            end_ix = min(len(ctxts), (b + 1) * 32)
+        for b in range(len(ctxts)//FLAGS.batch_size + 1):
+            start_ix = b * FLAGS.batch_size
+            end_ix = min(len(ctxts), (b + 1) * FLAGS.batch_size)
             qs.extend(current_app.generator.get_q_batch(ctxts[start_ix:end_ix], ans[start_ix:end_ix], ans_pos[start_ix:end_ix]))
     else:
         qs = current_app.generator.get_q_batch(ctxts, ans, ans_pos)
